@@ -23,7 +23,7 @@ jobs:
         run: pip install requests supabase
 
       - name: Buscar SIROS e inserir no Supabase
-        run: python scripts/fetch_flyghts.py
+        run: python scripts/fetchflyghts.py
         env:
           AIRPORTS:             ${{ vars.AIRPORTS || 'SBCA,SBGR,SBSP,SBCT,SBGL,SBBR,SBFL,SBPA,SBSV,SBFZ' }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
