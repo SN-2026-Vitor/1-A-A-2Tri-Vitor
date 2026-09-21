@@ -385,7 +385,7 @@ def baixar_vra() -> list[dict]:
     if not url:
         return []
 
-    print(f"\nBaixando arquivo VRA:")
+    print("\nBaixando arquivo VRA:")
     print(f"GET {url}")
 
     try:
@@ -398,7 +398,7 @@ def baixar_vra() -> list[dict]:
 
     conteudo = r.content
 
-    # Tenta UTF-8 primeiro.
+    # Tenta UTF-8 primeiro
     try:
         texto = conteudo.decode("utf-8-sig")
         encoding = "utf-8-sig"
@@ -409,14 +409,53 @@ def baixar_vra() -> list[dict]:
 
     print(f"  Encoding utilizado: {encoding}")
 
-    # Detecta delimitador automaticamente.
-    primeira_parte = texto[:10000]
+    # Divide o arquivo em linhas
+    linhas = texto.splitlines()
+
+    # Procura automaticamente a linha que contém o cabeçalho real
+    indice_cabecalho = None
+
+    for i, linha in enumerate(linhas[:30]):
+
+        linha_upper = linha.upper()
+
+        # O cabeçalho real deve possuir campos típicos do VRA
+        if (
+            ("EMPRESA" in linha_upper or "ICAO" in linha_upper)
+            and ("ORIGEM" in linha_upper or "AERÓDROMO ORIGEM" in linha_upper or "AERODROMO ORIGEM" in linha_upper)
+            and ("DESTINO" in linha_upper or "AERÓDROMO DESTINO" in linha_upper or "AERODROMO DESTINO" in linha_upper)
+        ):
+            indice_cabecalho = i
+            break
+
+    if indice_cabecalho is None:
+
+        print("  [ERRO] Não foi possível localizar o cabeçalho real do CSV.")
+
+        print("  Primeiras linhas encontradas:")
+
+        for i, linha in enumerate(linhas[:10]):
+            print(f"    {i}: {linha[:300]}")
+
+        return []
+
+    print(
+        f"  Cabeçalho localizado na linha "
+        f"{indice_cabecalho + 1}"
+    )
+
+    # Remove as linhas de metadados anteriores ao cabeçalho
+    texto_csv = "\n".join(linhas[indice_cabecalho:])
+
+    # Detecta delimitador
+    primeira_parte = texto_csv[:10000]
 
     try:
         dialect = csv.Sniffer().sniff(
             primeira_parte,
             delimiters=";,|\t,"
         )
+
         delimitador = dialect.delimiter
 
     except csv.Error:
@@ -425,7 +464,7 @@ def baixar_vra() -> list[dict]:
     print(f"  Delimitador detectado: {repr(delimitador)}")
 
     reader = csv.DictReader(
-        io.StringIO(texto),
+        io.StringIO(texto_csv),
         delimiter=delimitador
     )
 
@@ -434,12 +473,13 @@ def baixar_vra() -> list[dict]:
     print(f"  VRA carregado: {len(registros)} linhas brutas")
 
     if reader.fieldnames:
+
         print("  Colunas encontradas:")
+
         for coluna in reader.fieldnames:
             print(f"    - {coluna}")
 
     return registros
-
 
 # ── Processamento ─────────────────────────────────────────────────────────────
 
