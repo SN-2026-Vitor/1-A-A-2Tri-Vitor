@@ -204,26 +204,6 @@ for f in todos_voos:
     if not empresa or not nr_voo or not origem or not destino:
         continue
     registros.append(normalizar_voo(f))
-
-# Remove duplicatas pela mesma chave usada no upsert
-unicos = {}
-
-for r in registros:
-    chave = (
-        r["data_referencia"],
-        r["icao_empresa"],
-        r["numero_voo"],
-        r["icao_origem"],
-        r["icao_destino"],
-        r["etapa"],
-    )
-    unicos[chave] = r
-
-duplicados = len(registros) - len(unicos)
-registros = list(unicos.values())
-
-if duplicados > 0:
-    print(f"  Duplicatas removidas antes do upsert: {duplicados}")
   
 print(f"\nRegistros filtrados para os aeroportos configurados: {len(registros)}")
 print(
@@ -231,6 +211,38 @@ print(
     "(data_referencia + icao_empresa + numero_voo + icao_origem + icao_destino + etapa). "
     "Voos já existentes são atualizados — sem duplicatas."
 )
+# Remove duplicatas internas antes do envio
+# (a API SIROS pode retornar o mesmo voo mais de uma vez)
+def deduplicar(lista: list) -> list:
+    seen = set()
+    result = []
+
+    for r in lista:
+        key = (
+            r.get("data_referencia"),
+            r.get("icao_empresa"),
+            r.get("numero_voo"),
+            r.get("icao_origem"),
+            r.get("icao_destino"),
+            r.get("etapa"),
+        )
+
+        if key not in seen:
+            seen.add(key)
+            result.append(r)
+
+    return result
+
+
+antes = len(registros)
+registros = deduplicar(registros)
+removidos = antes - len(registros)
+
+if removidos:
+    print(
+        f"  Deduplicação: {removidos} registro(s) "
+        f"duplicado(s) removido(s) antes do envio"
+    )
 
 # Envio em lotes ao Supabase
 total_processados = 0
