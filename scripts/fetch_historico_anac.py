@@ -66,7 +66,6 @@ VRA_URL = (
     f"Voo%20Regular%20Ativo%20%28VRA%29/"
     f"{ano}/{ano}{mes}.csv"
 )
-)
 
 # URL alternativa (portal de dados abertos)
 VRA_URL_ALT = (
